@@ -134,7 +134,7 @@ CORRECCION <- function(Ficha, FuelLevel, Lat, Lng, Suma_delta, Delta) {
       j <- 0
 
       for (i in c(1:length(indices_subidas))) {
-        # PARA TODOS LO PUNTOS QUE TENGAN UN DIFENCIA DE NIVEL ACUMULADA MAYOR AL 20% SE CALCULA LA DISTANCIA A CADA TALLER # nolint
+        # PARA TODOS LO PUNTOS QUE TENGAN UN DIFENCIA DE NIVEL ACUMULADA MAYOR AL 20% SE CALCULA LA DISTANCIA A CADA TALLER
         dist_talleres[i - j] <- as.integer(DISTANCIA_TALLERES(Lat[indices_subidas[i - j]], Lng[indices_subidas[i - j]])[1])
 
         # LAS OBSERVACIONES QUE SE ENCUENTREN A MAS DE 300 MTS DE UN TALLER SE DESCARTAN DE ESTE ANALISIS
