@@ -5,6 +5,6 @@
     "editor.suggest.showMethods": true,
     "editor.suggest.showIssues": true,
     "editor.suggest.showWords": true,
-    "editor.renderLineHighlightOnlyWhenFocus": true
+    "line_length_linter": 200
 
 }
