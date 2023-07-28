@@ -9,5 +9,6 @@
     "editor.maxTokenizationLineLength": 20000,
     "git.inputValidationLength": 72,
     "r.helpPanel.enableSyntaxHighlighting": false
+    "r.session.data.rowLimit": 200
 
 }
