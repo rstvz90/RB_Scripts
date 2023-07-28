@@ -5,6 +5,6 @@
     "editor.suggest.showMethods": true,
     "editor.suggest.showIssues": true,
     "editor.suggest.showWords": true,
-    "r.session.objectLengthLimit": 2000
+    "editor.renderLineHighlightOnlyWhenFocus": true
 
 }
