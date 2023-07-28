@@ -1,0 +1,9 @@
+{
+    "outline.problems.enabled": true,
+    "problems.decorations.enabled": true,
+    "problems.defaultViewMode": "tree",
+    "editor.suggest.showMethods": true,
+    "editor.suggest.showIssues": true,
+    "editor.suggest.showWords": true
+
+}
