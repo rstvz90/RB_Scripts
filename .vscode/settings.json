@@ -8,7 +8,7 @@
     "r.session.objectLengthLimit": 2000,
     "editor.maxTokenizationLineLength": 20000,
     "git.inputValidationLength": 72,
-    "r.helpPanel.enableSyntaxHighlighting": false
+    "r.helpPanel.enableSyntaxHighlighting": false,
     "r.session.data.rowLimit": 200
 
 }
