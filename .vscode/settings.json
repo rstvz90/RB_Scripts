@@ -5,6 +5,9 @@
     "editor.suggest.showMethods": true,
     "editor.suggest.showIssues": true,
     "editor.suggest.showWords": true,
-    "line_length_linter": 200
+    "r.session.objectLengthLimit": 2000,
+    "editor.maxTokenizationLineLength": 20000,
+    "git.inputValidationLength": 72,
+    "r.helpPanel.enableSyntaxHighlighting": false
 
 }
