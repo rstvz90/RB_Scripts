@@ -160,9 +160,9 @@ ggplot() +
     ) +
     ylim(0, max(dia_ralenti_41$Horas_ralenti) * 1.5) +
     labs(
-        title = "Horas de Ralenti 203",
+        title = "Horas de Ralenti 41",
         subtitle = paste0(
-            "Talleres de Saavedra, Moreno y Pilar (período: ",
+            "Taller de Carapachay (período: ",
             min(dia_ralenti_41$Fecha), " - ", max(dia_ralenti_41$Fecha), ")"
         ),
         y = "Horas de Ralenti",
