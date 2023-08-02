@@ -12,7 +12,7 @@ rm(list = ls())
 ralenti_41 <- read_xlsx("C:/Users/REstevez/Documents/Análisis/Datos/Ralenti PBI/RALENTI 41 Nov.xlsx", sheet = "Hoja1")
 setDT(ralenti_41)
 
-#ralenti_41 <- ralenti_41[!is.na(Taller), ]
+# ralenti_41 <- ralenti_41[!is.na(Taller), ]
 
 ralenti_41[, Fecha := as.Date(Desde)]
 
@@ -98,8 +98,8 @@ ggplot() +
     ) +
     geom_text(
         aes(
-            x = (as.Date("2022/11/01")+10),
-            y = max(dia_ralenti_41$Horas_ralenti)-40
+            x = (as.Date("2022/11/01") + 10),
+            y = max(dia_ralenti_41$Horas_ralenti) - 40
         ),
         label = label_placa,
         nudge_y = 30, nudge_x = 1, size = 5,
@@ -168,13 +168,3 @@ ggplot() +
         y = "Horas de Ralenti",
         x = "Fecha"
     )
-
-#ggsave("C:/Users/REstevez/Documents/Análisis/Resultados/ralenti_41_2.jpg", width = 1920, height = 1002, units = "px")
-
-#min_total <- sum(ralenti_41[, `Min Ralentí`])
-#min_15 <- sum(ralenti_41[`Min Ralentí` > 15, `Min Ralentí`])
-#min_20 <- sum(ralenti_41[`Min Ralentí` > 20, `Min Ralentí`])
-
-#min_15 / min_total
-#min_20 / min_total
-
