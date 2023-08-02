@@ -84,7 +84,7 @@ listofpackages <- c(
   "rstudioapi", "stringr",
   "readxl", "data.table",
   "purrr", "naniar", "roll", "bit64",
-  "geosphere", "scales", "tibble"
+  "geosphere", "scales", "tibble", "jsonlite"
 )
 
 # revisar e instalar librerias que no es están instaladas
@@ -269,11 +269,19 @@ CALCULO_DISTANCIA <- function(X) {
   ))
 }
 
+path <- "//VM-COCHES-01/ExperimentosR"
+files <- list.files(path, full.names = TRUE)
+
+datos <- read_json(files[1], simplifyVector = FALSE, flatten = TRUE)
+
+
+
 
 # LECTURA DE DATOS ----------------------------------
-
+path <- "C:/Users/REstevez/Documents/Análisis/Tapas Combustible/Datos/driveup_data_2023_07_13.csv"
 # LECTURA DATOS DE DRIVE UP. SE UTILIZA FREAD DEL PAQUETE DATA.TABLE POR SER LA MAS RAPIDA.
-raw_data <- fread("C:/Users/REstevez/Documents/Análisis/Tapas Combustible/Datos/driveup_data_2023_07_13.csv", sep = ";")
+raw_data <- fread(path, sep = ";")
+
 
 # LECTURA DATOS DE CHASIS Y LINEA DE CADA FICHA
 Listado_Fichas <- read_csv("Listado Fichas.csv")
@@ -282,6 +290,7 @@ Listado_Fichas <- read_csv("Listado Fichas.csv")
 # EL COCHE NUMERO 4000 FIGURA EN LA TABLA COMO F4000
 # SE DEJAN SOLO LOS NUMEROS
 Listado_Fichas$Ficha <- str_sub(Listado_Fichas$Ficha, -4, -1)
+install.packages("languageserver", repos =  "https://github.com/REditorSupport/languageserver/")
 
 Listado_Fichas$Ficha <- as.integer(Listado_Fichas$Ficha)
 colnames(Listado_Fichas) <- c("Ficha", "Chasis", "Linea")
