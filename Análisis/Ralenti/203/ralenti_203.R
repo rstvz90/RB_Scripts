@@ -47,7 +47,7 @@ label_ahorro <- paste0(
     "Aproximadamente ", ahorro * 30 * 2, " lts mensuales"
 )
 
-pos_texto <- mean(dia_ralenti_203$Fecha)-5
+pos_texto <- mean(dia_ralenti_203$Fecha) - 5
 
 
 ggplot() +
@@ -168,12 +168,11 @@ ggplot() +
         x = "Fecha"
     )
 
-#ggsave("C:/Users/REstevez/Documents/Análisis/Resultados/ralenti_203_2.jpg", width = 1920, height = 1002, units = "px")
+# ggsave("C:/Users/REstevez/Documents/Análisis/Resultados/ralenti_203_2.jpg", width = 1920, height = 1002, units = "px")
 
-#min_total <- sum(ralenti_203[, `Min Ralentí`])
-#min_15 <- sum(ralenti_203[`Min Ralentí` > 15, `Min Ralentí`])
-#min_20 <- sum(ralenti_203[`Min Ralentí` > 20, `Min Ralentí`])
+# min_total <- sum(ralenti_203[, `Min Ralentí`])
+# min_15 <- sum(ralenti_203[`Min Ralentí` > 15, `Min Ralentí`])
+# min_20 <- sum(ralenti_203[`Min Ralentí` > 20, `Min Ralentí`])
 
-#min_15 / min_total
-#min_20 / min_total
-
+# min_15 / min_total
+# min_20 / min_total
