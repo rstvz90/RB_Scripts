@@ -2,6 +2,14 @@
 {
 
     "r.rterm.option": [],
-    "r.bracketedPaste": true
+    "r.bracketedPaste": true,
+    "window.title": "${dirty}${activeEditorShort}${separator}${folderPath}${separator}${appName}",
+    "tasks": [
+      {
+          "label": "echo",
+          "type": "shell",
+          "command": "echo ${workspaceFolder}"
+      }
+  ]
 
     }
