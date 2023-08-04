@@ -16,7 +16,7 @@ for (paquete in listofpackages) {
   suppressMessages(library(paquete, character.only = TRUE))
 }  
 
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
 
 
 # Mes_filtro <-  "abril"
@@ -25,8 +25,9 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 #-----------------------------
 path <- "C:/Users/REstevez/Documents/HISTORICOS"
 
-files <- list.files(path, full.names = TRUE)
+setwd(path)
 
+files <- list.files(path, full.names = TRUE)
 
 # LITROS RECIBIDOS ---------------------------
 Tabla_LTS <- read_xlsx("//sm-public/SGC/Abastecimiento_(AB)/Combustible/OP2022.xlsx", sheet = "ROS",
@@ -88,9 +89,16 @@ LTS_recibidos <- Tabla_LTS %>%
 #   filter(!is.na(Taller))
 files_mov_stock <- files[grepl("mov_stock", files)]
 
-LTS_recibidos_2 <- read_xlsx(files_mov_stock)
+LTS_recibidos_2 <- lapply(files_mov_stock, 
+read_xlsx, 
+col_types = c("date", "text", "text", "numeric", "text", "text"))
 
-setDT(LTS_recibidos_2)
+LTS_recibidos_2 <- lapply(LTS_recibidos_2, setDT)
+
+LTS_recibidos_2 <- rbindlist(LTS_recibidos_2)
+
+LTS_recibidos_2 <- distinct(LTS_recibidos_2)
+
 setnames(LTS_recibidos_2, c("Almacén", "Nombre del artículo"), c("Taller" , "Combustible"))
 
 LTS_recibidos_2[Taller == "RAC", Taller := "BAI"]
@@ -105,7 +113,7 @@ LTS_recibidos_2[, `:=`(Year = year(Fecha),
                        Mes = lubridate::month(Fecha, label = TRUE, abbr = FALSE))]
 
 LTS_recibidos_2 <- LTS_recibidos_2[Year == 2023 &
-                                   Mes < "julio",]
+                                   Mes < "agosto",]
 
 LTS_recibidos_2 <- LTS_recibidos_2[, .(LTS_recibidos_2 = sum(Cantidad, na.rm = TRUE)),
                                    by = .(Taller, Year, Mes)]
@@ -113,7 +121,7 @@ LTS_recibidos_2 <- LTS_recibidos_2[, .(LTS_recibidos_2 = sum(Cantidad, na.rm = T
 
 setDT(LTS_recibidos)
 LTS_excel <- LTS_recibidos[Year == 2023 &
-                             Mes < "julio",]
+                             Mes < "agosto",]
 
 LTS_excel <- LTS_excel[, .(LTS = sum(LTS_recibidos, na.rm = TRUE)),
                        by = .(Year, Mes)]
@@ -158,7 +166,15 @@ LTS_excel <- LTS_excel[, .(LTS = sum(LTS_recibidos, na.rm = TRUE)),
 
 # STOCK INICIAL Y FINAL -----------------------
 
-Tabla_Telemedicion <- read_xlsx("C:/Users/REstevez/Documents/HISTORICOS/TELEMEDICION_HISTORICO.xlsx")
+files_telemedicion <- files[grepl("TELEMEDICION", files)]
+
+Tabla_Telemedicion <- lapply(files_telemedicion, read_xlsx)
+
+Tabla_Telemedicion <- lapply(Tabla_Telemedicion, setDT)
+
+Tabla_Telemedicion <- rbindlist(Tabla_Telemedicion)
+
+Tabla_Telemedicion <- distinct(Tabla_Telemedicion)
 
 id_tanques <- read_xlsx("ID TANQUES.xlsx", sheet = "ID")
 
@@ -171,7 +187,7 @@ Tabla_Telemedicion[is.na(Tabla_Telemedicion)] <- 0
 # 
 # Tabla_Telemedicion <- left_join(Tabla_Telemedicion, id_tanques, by = c("TALLER" = "Taller",
 #                                                                        "IDMULTITANQUE" = "IdTanque"))
-
+data.table::unique()
 Stock_fin_ini <- Tabla_Telemedicion %>% 
   mutate(FECHAINICIO = dmy_hms(FECHAINICIO),
          FECHACIERRE = dmy_hms(FECHACIERRE),
@@ -504,10 +520,12 @@ vector_colores <- c("-1" = "red", "1" = "green")
 
 # plot_bar
 
+carpeta <- "C:/Users/REstevez/Documents/Análisis/Resultados/Gráficos Stock/202307/"
+
 for (taller in lista_talleres) {
   
   TOTAL_plot <- TOTAL %>% 
-    filter(Year == 2023, Taller == taller, Mes < "julio") #%>% 
+    filter(Year == 2023, Taller == taller, Mes < "agosto") #%>% 
   #mutate(Combustible = as.factor(Combustible))
   
   Diferencia_total = round(sum(TOTAL_plot$Diferencia, na.rm = TRUE))
@@ -573,7 +591,7 @@ for (taller in lista_talleres) {
                                                   subtitle = label_total
   )
   
-  jpeg(filename = paste0(taller,".jpg"), pointsize = 12, quality = 150, 
+  jpeg(filename = paste0(carpeta,taller,".jpg"), pointsize = 12, quality = 150, 
        width = 960, height = 480, bg = "white", res = NA, restoreConsole = TRUE)
   print(plot_diferencia_3)
   dev.off()
@@ -630,3 +648,43 @@ for (taller in lista_talleres) {
 # 
 # plot_porcentaje 
 
+
+files <- list.files(path, full.names = TRUE)
+
+files_mov_stock <- files[grepl("mov_stock", files)]
+
+df_mov_stock <- lapply(files_mov_stock, 
+read_xlsx, 
+col_types = c("date", "text", "text", "numeric", "text", "text"))
+
+df_mov_stock <- lapply(df_mov_stock, setDT)
+
+df_mov_stock <- rbindlist(df_mov_stock)
+
+df_mov_stock <- distinct(df_mov_stock)
+
+files_telemedicion <- files[grepl("TELEMEDICION", files)]
+
+df_telemedicion <- lapply(files_telemedicion, read_xlsx)
+
+df_telemedicion <- lapply(df_telemedicion, setDT)
+
+df_telemedicion <- rbindlist(df_telemedicion)
+
+df_telemedicion <- distinct(df_telemedicion)
+
+files_recuentos <- files[grepl("PC 2023", files)]
+
+df_recuentos <- lapply(files_recuentos, fread)
+
+df_recuentos <- rbindlist(df_recuentos)
+
+df_recuentos <- distinct(df_recuentos)
+
+df_recuentos_2 <- df_recuentos[Referencia == "Pedido de compra",]
+df_mov_stock_2 <- df_recuentos[Referencia == "Pedido de compra",]
+sum(df_mov_stock_2$Litros)
+sum(df_recuentos_2$Litros)
+setorder(df_mov_stock_2, Fecha, Litros)
+setorder(df_recuentos_2, Fecha, Litros)
+sum(df_mov_stock_2 == df_recuentos_2)
