@@ -10,7 +10,6 @@ rm(list = ls())
 ralenti_41 <- read_xlsx("C:/Users/REstevez/Documents/Análisis/Datos/Ralenti PBI/RALENTI 41 Nov.xlsx", sheet = "Hoja1")
 setDT(ralenti_41)
 
-ralenti_41[, Fecha := as.Date(Desde)]
 
 dia_ralenti_41 <- ralenti_41[, .(Horas_ralenti = sum(`Estado (min.)`, na.rm = TRUE) / 60),
   by = .(Fecha)
