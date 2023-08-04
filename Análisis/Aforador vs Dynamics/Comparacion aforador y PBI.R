@@ -94,7 +94,7 @@ tabla_comparacion[is.na(tabla_comparacion)] <- 0
 
 tabla_comparacion$Diferencia <- tabla_comparacion$DESPACHADO_AFORADOR - tabla_comparacion$DESPACHADO_D365
 
-clipr::write_clip(tabla_comparacion)
+clipr::write_clip(tabla_comparacion, dec = ",")
 
 sum(tabla_comparacion$Diferencia)
 
