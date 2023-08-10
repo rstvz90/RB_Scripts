@@ -3,6 +3,9 @@
 
     "r.rterm.option": [],
     "r.bracketedPaste": true,
+    "editor.formatOnType": false,
+    "editor.formatOnPaste": false,
+    "editor.formatOnSave": false,
     "window.title": "${dirty}${activeEditorShort}${separator}${folderPath}${separator}${appName}",
     "tasks": [
       {
