@@ -84,7 +84,8 @@ listofpackages <- c(
   "rstudioapi", "stringr",
   "readxl", "data.table",
   "purrr", "naniar", "roll", "bit64",
-  "geosphere", "scales", "tibble", "jsonlite"
+  "geosphere", "scales", "tibble", 
+  "jsonlite","foreach", "doParallel"
 )
 
 # revisar e instalar librerias que no es están instaladas
@@ -269,14 +270,219 @@ CALCULO_DISTANCIA <- function(X) {
   ))
 }
 
+
+#EXP_1
+tic()
 path <- "//VM-COCHES-01/ExperimentosR"
 files <- list.files(path, full.names = TRUE)
 
-datos <- read_json(files[1], simplifyVector = FALSE, flatten = TRUE)
+year <- "2023"
+month <- "07"
+day <- "02"
+
+dia_analisis <- paste0(year, "-", month, "-", day)
+dia_analisis <- as_date(dia_analisis)
+files_filtrado <- files[grepl(dia_analisis, files)]
+horas_extras <- list(
+  paste0(path, "/", dia_analisis - 1, " 23.txt"),
+  paste0(path, "/", dia_analisis - 1, " 24.txt"),
+  paste0(path, "/", dia_analisis + 1, " 00.txt"),
+  paste0(path, "/", dia_analisis + 1, " 01.txt")
+)
+files_filtrado <- append(files_filtrado, horas_extras)
+
+
+j <- 0
+for (i in files_filtrado) {
+  jsonlist <- list()
+  j <- j + 1
+  con <- file(i, open = "r")
+
+  while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
+    jsonlist <- append(jsonlist, list(fromJSON(line)))
+  }
+  close(con)
+  temporary <- lapply(jsonlist, as.data.frame)
+  temporary <- rbindlist(temporary)
+  name_file <- paste0("C:/Users/REstevez/Downloads/temp/file_",j,".csv")
+  fwrite(temporary, name_file) 
+  rm(list = c("temporary", "name_file", "jsonlist"))
+  gc(full = TRUE)
+}
+
+
+path_2 <- "C:/Users/REstevez/Downloads/temp"
+files <- list.files(path_2, full.names = TRUE)
+
+DUP_dt <- lapply(files, fread)
+
+DUP_dt <- rbindlist(DUP_dt)
+
+DUP_dt <- distinct(DUP_dt)
+toc()
+
+
+#--------------------------------------------
+# EXP_2
+library(data.table)
+library(jsonlite)
+library(foreach)
+library(doParallel)
+
+# Set the number of cores to be used for parallel processing
+num_cores <- 4  # Adjust as needed
+
+# Initialize parallel backend
+cl <- makeCluster(num_cores)
+registerDoParallel(cl)
+
+tic()
+path <- "//VM-COCHES-01/ExperimentosR"
+files <- list.files(path, full.names = TRUE)
+
+year <- "2023"
+month <- "07"
+day <- "02"
+
+dia_analisis <- paste0(year, "-", month, "-", day)
+dia_analisis <- as_date(dia_analisis)
+files_filtrado <- files[grepl(dia_analisis, files)]
+horas_extras <- list(
+  paste0(path, "/", dia_analisis - 1, " 23.txt"),
+  paste0(path, "/", dia_analisis - 1, " 24.txt"),
+  paste0(path, "/", dia_analisis + 1, " 00.txt"),
+  paste0(path, "/", dia_analisis + 1, " 01.txt")
+)
+files_filtrado <- append(files_filtrado, horas_extras)
+
+
+j <- 0
+for (i in files_filtrado) {
+  jsonlist <- list()
+  j <- j + 1
+  con <- file(i, open = "r")
+
+  while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
+    jsonlist <- append(jsonlist, list(fromJSON(line)))
+  }
+  close(con)
+  temporary <- lapply(jsonlist, as.data.frame)
+  temporary <- rbindlist(temporary)
+  name_file <- paste0("C:/Users/REstevez/Downloads/temp/file_",j,".csv")
+  fwrite(temporary, name_file) 
+  rm(list = c("temporary", "name_file", "jsonlist"))
+  gc(full = TRUE)
+}
+
+
+path_2 <- "C:/Users/REstevez/Downloads/temp"
+files <- list.files(path_2, full.names = TRUE)
+
+DUP_dt <- lapply(files, fread)
+
+DUP_dt <- rbindlist(DUP_dt)
+
+DUP_dt <- distinct(DUP_dt)
+toc()
 
 
 
 
+#--------------------------------------------
+
+
+path <- "//VM-COCHES-01/ExperimentosR"
+files <- list.files(path, full.names = TRUE)
+
+year <- "2023"
+month <- "07"
+day <- "02"
+dia_analisis <- paste0(year, "-", month, "-", day)
+dia_analisis <- as_date(dia_analisis)
+files_filtrado <- files[grepl(dia_analisis, files)]
+horas_extras <- list(
+  paste0(path, "/", dia_analisis - 1, " 23.txt"),
+  paste0(path, "/", dia_analisis - 1, " 24.txt"),
+  paste0(path, "/", dia_analisis + 1, " 00.txt"),
+  paste0(path, "/", dia_analisis + 1, " 01.txt")
+)
+files_filtrado <- append(files_filtrado, horas_extras)
+# Set the number of cores to be used for parallel processing
+num_cores <- 4  # Adjust as needed
+
+# Initialize parallel backend
+cl <- makeCluster(num_cores)
+registerDoParallel(cl)
+
+# Function to process a file and return a data frame
+process_file <- function(file_path) {
+  con <- file(file_path, open = "r")
+  json_data <- vector("list", length = 0)
+  while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
+    json_data <- append(json_data, list(fromJSON(line)))
+  }
+  close(con)
+  data_frame <- as.data.table(json_data)
+  return(data_frame)
+}
+temporario <- list()
+
+for (i in files_filtrado) {
+# Use foreach for parallel processing
+json_data_list <- foreach(file_path = i, .combine = rbindlist, .packages = c("jsonlite", "data.table")) %dopar% {
+  process_file(file_path)
+}
+temporary <- rbindlist(json_data_list)
+
+name_file <- paste0("C:/Users/REstevez/Downloads/temp/file_",j,".csv")
+fwrite(temporary, name_file) 
+rm(list = c("temporary", "name_file", "json_data_list"))
+gc(full = TRUE)
+
+}
+
+stopCluster(cl)
+
+path_2 <- "C:/Users/REstevez/Downloads/temp"
+files <- list.files(path_2, full.names = TRUE)
+
+DUP_dt <- lapply(files, fread)
+
+DUP_dt <- rbindlist(DUP_dt)
+
+DUP_dt <- distinct(DUP_dt)
+toc()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#---------------------------------------------
 # LECTURA DE DATOS ----------------------------------
 path <- "C:/Users/REstevez/Documents/Análisis/Tapas Combustible/Datos/driveup_data_2023_07_13.csv"
 # LECTURA DATOS DE DRIVE UP. SE UTILIZA FREAD DEL PAQUETE DATA.TABLE POR SER LA MAS RAPIDA.
@@ -290,7 +496,7 @@ Listado_Fichas <- read_csv("Listado Fichas.csv")
 # EL COCHE NUMERO 4000 FIGURA EN LA TABLA COMO F4000
 # SE DEJAN SOLO LOS NUMEROS
 Listado_Fichas$Ficha <- str_sub(Listado_Fichas$Ficha, -4, -1)
-install.packages("languageserver", repos =  "https://github.com/REditorSupport/languageserver/")
+install.packages("languageserver", repos = "https://github.com/REditorSupport/languageserver/")
 
 Listado_Fichas$Ficha <- as.integer(Listado_Fichas$Ficha)
 colnames(Listado_Fichas) <- c("Ficha", "Chasis", "Linea")
