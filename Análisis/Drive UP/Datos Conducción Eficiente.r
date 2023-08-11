@@ -156,6 +156,11 @@ consumo_empleados <- merge.data.table(consumo_empleados, tiempos_41,
   all.x = TRUE
 )
 
+servicios_por_chasis <- consumo_empleados[, .(Cant_Servicios = .N) ,by = .(cod_emp, Chasis)]
+choferes_mismo_chasis <- servicios_por_chasis[, .(cant = .N), by = cod_emp]
+choferes_mismo_chasis <- choferes_mismo_chasis[cant == 1, cod_emp]
+
+consumo_empleados <- consumo_empleados[cod_emp %in% choferes_mismo_chasis, ]
 consumo_empleados <- consumo_empleados[`Suma de Distance` > 50, ]
 consumo_empleados <- consumo_empleados[`Suma de consumption.avgFuel` > 20, ]
 
@@ -172,23 +177,22 @@ consumo_empleados <- consumo_empleados[, .(
   Acelerador_time = weighted.mean(accelerator.get80, times.driving, na.rm = TRUE),
   Acelerador_time_2 = weighted.mean(accelerator.get80, times.engine, na.rm = TRUE),
   cant_servicios = .N
-), by = .(cod_emp)]
+), by = .(cod_emp, Chasis)]
 
 consumo_empleados[, `:=`(
   Consumo = LTS / Distancia * 100
 )]
-
-consumo_empleados <- consumo_empleados[cant_servicios > 20,]
+choferes_mismo_chasis <- consumo_empleados[, .(cant = .N), by = cod_emp]
+choferes_mismo_chasis <- choferes_mismo_chasis[cant == 1, cod_emp]
+consumo_empleados_2 <- consumo_empleados[cant_servicios > 10 & cod_emp %in% choferes_mismo_chasis,]
 
 etiquetas_consumo <- c("Bajo", "Medio", "Alto")
 
-division_consumo <- quantile(consumo_empleados$Consumo, probs = c(0, 0.20, 0.80, 1))
-
 consumo_empleados[, Nivel_consumo := cut(Consumo,
-  breaks = division_consumo,
+  breaks = quantile(Consumo, probs = c(0, 0.20, 0.80, 1)),
   labels = etiquetas_consumo,
   include.lowest = TRUE
-)]
+), by = Chasis]
 
 consumo_empleados_plot <- consumo_empleados[Nivel_consumo != "Medio", ]
 
@@ -200,3 +204,4 @@ ggplot(consumo_empleados_plot) +
 ggplot(consumo_empleados_plot) +
   aes(x = Nivel_consumo, y = Acelerador_time) +
   geom_boxplot()
+
