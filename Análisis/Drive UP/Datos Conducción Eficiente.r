@@ -182,26 +182,29 @@ consumo_empleados <- consumo_empleados[, .(
 consumo_empleados[, `:=`(
   Consumo = LTS / Distancia * 100
 )]
-choferes_mismo_chasis <- consumo_empleados[, .(cant = .N), by = cod_emp]
-choferes_mismo_chasis <- choferes_mismo_chasis[cant == 1, cod_emp]
-consumo_empleados_2 <- consumo_empleados[cant_servicios > 10 & cod_emp %in% choferes_mismo_chasis,]
+
+consumo_empleados <- consumo_empleados[cant_servicios > 5,]
 
 etiquetas_consumo <- c("Bajo", "Medio", "Alto")
 
 consumo_empleados[, Nivel_consumo := cut(Consumo,
-  breaks = quantile(Consumo, probs = c(0, 0.20, 0.80, 1)),
+  breaks = quantile(Consumo, probs = c(0, 0.25, 0.75, 1)),
   labels = etiquetas_consumo,
   include.lowest = TRUE
 ), by = Chasis]
+consumo_empleados[, .(cantidad = .N), by = .(Chasis, Nivel_consumo)]
+
 
 consumo_empleados_plot <- consumo_empleados[Nivel_consumo != "Medio", ]
 
 ggplot(consumo_empleados_plot) +
   aes(x = Nivel_consumo, y = Acelerador_dist) +
-  geom_boxplot()
+  geom_boxplot() +
+  facet_grid(~Chasis)
 
 
 ggplot(consumo_empleados_plot) +
   aes(x = Nivel_consumo, y = Acelerador_time) +
-  geom_boxplot()
+  geom_boxplot()+
+  facet_grid(~Chasis)
 
