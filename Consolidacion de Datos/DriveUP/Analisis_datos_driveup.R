@@ -454,7 +454,48 @@ DUP_dt <- distinct(DUP_dt)
 toc()
 
 
+# EXP3-------------------------------
+tic()
+path <- "//VM-COCHES-01/ExperimentosR"
+files <- list.files(path, full.names = TRUE)
 
+year <- "2023"
+month <- "07"
+day <- "02"
+dia_analisis <- paste0(year, "-", month, "-", day)
+dia_analisis <- as_date(dia_analisis)
+files_filtrado <- files[grepl(dia_analisis, files)]
+horas_extras <- list(
+  paste0(path, "/", dia_analisis - 1, " 23.txt"),
+  paste0(path, "/", dia_analisis - 1, " 24.txt"),
+  paste0(path, "/", dia_analisis + 1, " 00.txt"),
+  paste0(path, "/", dia_analisis + 1, " 01.txt")
+)
+files_filtrado <- append(files_filtrado, horas_extras)
+jsonlist <- list()
+for (i in files_filtrado) {
+  con <- file(i, open = "r")
+  while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
+    jsonlist <- append(jsonlist, list(fromJSON(line)))
+  }
+  close(con)
+  temporary <- lapply(jsonlist, as.data.frame)
+  temporary <- rbindlist(temporary)
+  name_file <- paste0("C:/Users/REstevez/Downloads/temp/file_",j,".csv")
+  fwrite(temporary, name_file) 
+  rm(list = c("temporary", "name_file", "jsonlist"))
+  gc(full = TRUE)
+}
+
+path_2 <- "C:/Users/REstevez/Downloads/temp"
+files <- list.files(path_2, full.names = TRUE)
+
+DUP_dt <- lapply(files, fread)
+
+DUP_dt <- rbindlist(DUP_dt)
+
+DUP_dt <- distinct(DUP_dt)
+toc()
 
 
 
