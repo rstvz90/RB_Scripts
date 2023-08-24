@@ -329,8 +329,9 @@ library(jsonlite)
 library(foreach)
 library(doParallel)
 
+
 # Set the number of cores to be used for parallel processing
-num_cores <- 4  # Adjust as needed
+num_cores <- 8  # Adjust as needed
 
 # Initialize parallel backend
 cl <- makeCluster(num_cores)
@@ -339,7 +340,8 @@ registerDoParallel(cl)
 tic()
 path <- "//VM-COCHES-01/ExperimentosR"
 files <- list.files(path, full.names = TRUE)
-
+a <- stream_in(file(files[1]))
+a <- flatten(a)
 year <- "2023"
 month <- "07"
 day <- "02"
@@ -472,8 +474,11 @@ horas_extras <- list(
   paste0(path, "/", dia_analisis + 1, " 01.txt")
 )
 files_filtrado <- append(files_filtrado, horas_extras)
-jsonlist <- list()
+
+j <- 0
 for (i in files_filtrado) {
+  j <- j + 1
+  jsonlist <- list()
   con <- file(i, open = "r")
   while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
     jsonlist <- append(jsonlist, list(fromJSON(line)))
@@ -489,6 +494,7 @@ for (i in files_filtrado) {
 
 path_2 <- "C:/Users/REstevez/Downloads/temp"
 files <- list.files(path_2, full.names = TRUE)
+files <- files[grepl("files", files)]
 
 DUP_dt <- lapply(files, fread)
 
@@ -497,17 +503,74 @@ DUP_dt <- rbindlist(DUP_dt)
 DUP_dt <- distinct(DUP_dt)
 toc()
 
+# EXP4 --------------------------------
+tic()
+path <- "//VM-COCHES-01/ExperimentosR"
+files <- list.files(path, full.names = TRUE)
+
+year <- "2023"
+month <- "07"
+day <- "02"
+dia_analisis <- paste0(year, "-", month, "-", day)
+dia_analisis <- as_date(dia_analisis)
+files_filtrado <- files[grepl(dia_analisis, files)]
+horas_extras <- list(
+  paste0(path, "/", dia_analisis - 1, " 23.txt"),
+  paste0(path, "/", dia_analisis - 1, " 24.txt"),
+  paste0(path, "/", dia_analisis + 1, " 00.txt"),
+  paste0(path, "/", dia_analisis + 1, " 01.txt")
+)
+files_filtrado <- append(files_filtrado, horas_extras)
+jsonlist <- list()
+for (i in files_filtrado) {
+  con <- file(i, open = "r")
+  while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
+    jsonlist <- append(jsonlist, list(fromJSON(line)))
+  }
+  print(i)
+  print(Sys.time())
+  close(con)
+}
+DUP_dt <- lapply(jsonlist, as.data.frame)
+DUP_dt <- rbindlist(DUP_dt)
+toc()
+
+
+# exp5
+
+tic()
+path <- "//VM-COCHES-01/ExperimentosR"
+files <- list.files(path, full.names = TRUE)
+
+year <- "2023"
+month <- "07"
+day <- "02"
+dia_analisis <- paste0(year, "-", month, "-", day)
+dia_analisis <- as_date(dia_analisis)
+files_filtrado <- files[grepl(dia_analisis, files)]
+horas_extras <- list(
+  paste0(path, "/", dia_analisis - 1, " 23.txt"),
+  paste0(path, "/", dia_analisis - 1, " 24.txt"),
+  paste0(path, "/", dia_analisis + 1, " 00.txt"),
+  paste0(path, "/", dia_analisis + 1, " 01.txt")
+)
+files_filtrado <- append(files_filtrado, horas_extras)
+
+jsonlist <- list()
+j <- 1
+for (i in files_filtrado) {
+  json <- stream_in(file(i))
+  json <- flatten(json)
+ jsonlist[[j]] <- json
+ j <- j + 1
+}
+DUP_dt <- lapply(jsonlist, as.data.frame)
+DUP_dt <- rbindlist(DUP_dt)
+toc()
 
 
 
-
-
-
-
-
-
-
-
+head(json)
 
 
 

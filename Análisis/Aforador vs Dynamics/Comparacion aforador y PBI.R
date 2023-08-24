@@ -84,12 +84,12 @@ tabla_comparacion <- tabla_comparacion %>%
   arrange(FECHA, TALLER)
 tabla_comparacion$DIA <- lubridate::wday(tabla_comparacion$FECHA, label= TRUE, abbr= FALSE)
 tabla_comparacion[is.na(tabla_comparacion)] <- 0
-# tabla_comparacion <- tabla_comparacion %>%
-#   filter(
-#     # FECHA < "2023/05/21",
+tabla_comparacion <- tabla_comparacion %>%
+  filter(
+    FECHA < "2023/08/16",
 #     # FECHA > "2023/05/01",
 #     #TALLER != "STE"
-#           )
+          )
 
 
 tabla_comparacion$Diferencia <- tabla_comparacion$DESPACHADO_AFORADOR - tabla_comparacion$DESPACHADO_D365

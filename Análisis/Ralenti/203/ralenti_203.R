@@ -4,6 +4,7 @@ library(plotly)
 library(readxl)
 library(rstudioapi)
 library(lubridate)
+library(clipr)
 
 rm(list = ls())
 
@@ -176,3 +177,28 @@ ggplot() +
 
 # min_15 / min_total
 # min_20 / min_total
+
+# RALENTI 10 MINUTOS ----------------------------------------
+
+ralenti_203_20min <- read_xlsx("//sm-public/Public/Mantenimiento/REstevez/Para Borrar/ralenti_203.xlsx")
+setDT(ralenti_203_20min)
+ralenti_203_20min <- ralenti_203_20min[!is.na(Taller), ]
+
+setnames(ralenti_203_20min, "Min Ralentí", "Min_ralenti")
+round(sum(ralenti_203_20min[Min_ralenti < 21,Min_ralenti])/60)
+round(sum(ralenti_203_20min[Min_ralenti < 11,Min_ralenti])/60)
+
+round(sum(ralenti_203_20min[Min_ralenti < 21,Min_ralenti])/60) - round(sum(ralenti_203_20min[Min_ralenti < 11,Min_ralenti])/60)
+
+ralenti_203_10min <- ralenti_203_20min[Min_ralenti < 11,]
+sum(ralenti_203_20min$Min_ralenti, na.rm = TRUE) / 60
+
+prom_ralenti_203 <- ralenti_203_20min[, .(Minutos_diarios = sum(Min_ralenti)), by = .(Ficha, Fecha)]
+prom_ralenti_203 <- prom_ralenti_203[, .(Minutos_diarios = round(mean(Minutos_diarios),2)), by = .(Ficha)]
+setorder(prom_ralenti_203, -Minutos_diarios)
+
+sum(ralenti_203_10min$Min_ralenti, na.rm = TRUE) / 60
+
+setorder(ralenti_203_20min, -Min_ralenti)
+write_clip(head(ralenti_203_20min, 20))
+write_clip(head(prom_ralenti_203, 20))
