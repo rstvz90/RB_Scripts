@@ -5,9 +5,9 @@ gc()
 # Lista de paquetes a utilizar
 listofpackages <- c(
   "tidyverse", "lubridate", "readxl",
-  "rstudioapi", "data.table",
-  "tibble", "ggplot2", "DT", "plotly",
-  "janitor", "clipr", "skimr", "ggrepel"
+  "rstudioapi", "data.table", "corrplot",
+  "tibble", "ggplot2", "DT", "plotly", "knitr",
+  "janitor", "clipr", "skimr", "ggrepel","factoextra"
 )
 
 # revisar e instalar librerias que no es están instaladas
@@ -95,7 +95,6 @@ ggplot(data = acelerador_cor) +
   facet_grid(~Chasis) +
   theme_minimal()
 
-
 # RPM -----------------------------------
 
 RPM_cor <- merge.data.table(rpm_41, consumo_41,
@@ -140,7 +139,6 @@ ggplot(data = RPM_cor) +
   theme_minimal()
 
 # MAYORES vs MENORES -----------------------
-
 consumo_empleados <- merge.data.table(acelerador_41, consumo_41,
   by = "cod_desig",
   all.x = TRUE
@@ -197,7 +195,6 @@ consumo_empleados_agrupados[, Nivel_consumo := cut(Consumo,
 consumo_empleados_agrupados[, .(cantidad = .N), by = .(Chasis, Nivel_consumo)]
 
 consumo_empleados_plot <- consumo_empleados_agrupados[Nivel_consumo != "Medio", ]
-
 
 ggplot(consumo_empleados_plot) +
   aes(x = Nivel_consumo, y = Acelerador_time) +
@@ -261,8 +258,6 @@ ggplot(consumo_ficha_plot) +
 cant_servicios <- consumo_empleados[, .(cantidad = .N), by = .(cod_emp, Chasis)]
 setorder(cant_servicios, -cantidad)
 
-
-
 # AGRUPACIÓN POR FICHA-FECHA -----------------------
 
 consumo_ficha_fecha <- merge.data.table(chasis_41, consumo_41,
@@ -305,32 +300,43 @@ consumo_agrupados_ff <- consumo_agrupados_ff[Consumo_DUP > 20,]
 consumo_ficha_pbi <- pbi_consumo[, .(
   KM_pbi = sum(Km, na.rm = TRUE),
   LTS_pbi = sum(ConsumoTotal, na.rm = TRUE)
-), by = .(Ficha)]
+), by = .(Ficha, Fecha)]
 
-consumo_ficha_pbi[, Consumo_PBI := LTS_pbi / KM_pbi * 100]
+consumo_ficha_pbi <- consumo_ficha_pbi[, .SD[-1], by = Ficha]
 
-consumo_ff <- consumo_agrupados_ff[, .(
-  Distancia_DUP = sum(Distancia, na.rm = TRUE),
-  LTS_DUP = sum(LTS, na.rm = TRUE),
-  Acelerador = weighted.mean(Acelerador, Tiempo, na.rm = TRUE),
-  Tiempo = sum(Tiempo, na.rm = TRUE)
-), by = .(ficha, Chasis)]
-
-
-consumo_ff <- merge.data.table(consumo_ff, consumo_ficha_pbi,
-  by.x = "ficha",
-  by.y = "Ficha",
+consumo_ff <- merge.data.table(consumo_ficha_pbi, consumo_agrupados_ff,
+  by.y = c("ficha", "Fecha"),
+  by.x = c("Ficha", "Fecha"),
   all.x = TRUE
 )
 
+consumo_ff <- consumo_ff[, .(
+  Distancia_DUP = sum(Distancia, na.rm = TRUE),
+  LTS_DUP = sum(LTS, na.rm = TRUE),
+  Acelerador = weighted.mean(Acelerador, Tiempo, na.rm = TRUE),
+  Tiempo = sum(Tiempo, na.rm = TRUE),
+  KM_pbi = sum(KM_pbi, na.rm = TRUE),
+  LTS_pbi = sum(LTS_pbi, na.rm = TRUE)
+), by = .(Ficha)]
+
 consumo_ff[, `:=`(
-  Consumo_DUP = LTS_DUP / Distancia_DUP * 100
+  Consumo_DUP = LTS_DUP / Distancia_DUP * 100,
+  Consumo_PBI = LTS_pbi / KM_pbi * 100
 )]
 
 consumo_ff[, `:=`(
   relacion_consumo = Consumo_DUP / Consumo_PBI - 1
 )]
 
+consumo_ff <- consumo_ff[Distancia_DUP > 0,]
+consumo_ff <- consumo_ff[LTS_DUP > 0,]
+consumo_ff <- consumo_ff[KM_pbi > 0,]
+
+consumo_ff <- merge.data.table(consumo_ff, chasis_41,
+  by.y = c("ficha"),
+  by.x = c("Ficha"),
+  all.x = TRUE
+)
 
 ggplotly(
 ggplot(subset(consumo_ficha_fecha, ficha == "F3495")) +
@@ -351,7 +357,6 @@ ggplot(subset(consumo_ficha_fecha, ficha == "F3495")) +
   geom_point(aes(x = Acelerador, y = get("l/100km")), color = "blue") +
   geom_point(aes(x = Acelerador, y = Consumo_DUP), color = "red")
 )
-
 
 etiquetas_consumo <- c("Bajo", "Medio", "Alto")
 
@@ -375,7 +380,6 @@ ggplot(consumo_ff) +
   geom_boxplot()+
   facet_grid(~Chasis)
 )
-
 
 ggplot(subset(consumo_ff, Nivel_consumo_PBI != "Medio")) +
   aes(x = Nivel_consumo_PBI, y = Acelerador) +
@@ -417,10 +421,6 @@ ggplot(subset(consumo_ff, Nivel_consumo_DUP != "Medio")) +
     strip.text = element_text(size = 18)
   )
 
-
-
-
-
 ggplotly(
 ggplot(consumo_ff) +
   aes(x = Consumo_PBI, y = Consumo_DUP) +
@@ -429,9 +429,6 @@ ggplot(consumo_ff) +
   facet_grid(~Chasis)
 )
 
-
-
-
 ggplotly(
 ggplot(consumo_ficha_fecha) +
   aes(x = Consumo_PBI, y = Consumo_DUP) +
@@ -439,8 +436,97 @@ ggplot(consumo_ficha_fecha) +
   facet_grid(~Chasis)
 )
 
-
 consumo_ff[, .(correlacion = cor(Consumo_DUP, Consumo_PBI)), by = .(Chasis)]
 
 cor(consumo_ff[Chasis == "BUS AGRALE MT 17.0/LE", Consumo_DUP], consumo_ff[Chasis == "BUS AGRALE MT 17.0/LE",Consumo_PBI])
 cor(consumo_ff[Chasis == "MB O500U 1826-59", Consumo_DUP], consumo_ff[Chasis == "MB O500U 1826-59",Consumo_PBI])
+
+# PCA -------------------------
+
+datos_pca <- merge.data.table(consumo_41, acelerador_41,
+  by = "cod_desig",
+  all.x = TRUE
+)
+datos_pca <- merge.data.table(datos_pca, chasis_41,
+  by = "cod_desig",
+  all.x = TRUE
+)
+datos_pca <- merge.data.table(datos_pca, empleados_41,
+  by = "cod_desig",
+  all.x = TRUE
+)
+datos_pca <- merge.data.table(datos_pca, freno_41,
+  by = "cod_desig",
+  all.x = TRUE
+)
+datos_pca <- merge.data.table(datos_pca, ralenti_41,
+  by = "cod_desig",
+  all.x = TRUE
+)
+datos_pca <- merge.data.table(datos_pca, rpm_41,
+  by = "cod_desig",
+  all.x = TRUE
+)
+datos_pca <- merge.data.table(datos_pca, rpm_optimo_41,
+  by = "cod_desig",
+  all.x = TRUE
+)
+datos_pca <- merge.data.table(datos_pca, tiempos_41,
+  by = "cod_desig",
+  all.x = TRUE
+)
+datos_pca <- merge.data.table(datos_pca, torque_41,
+  by = "cod_desig",
+  all.x = TRUE
+)
+datos_pca <- merge.data.table(datos_pca, velocidad_41,
+  by = "cod_desig",
+  all.x = TRUE
+)
+
+setnames(datos_pca, colnames(datos_pca), gsub("Suma de ", "", colnames(datos_pca)))
+
+datos_pca <- datos_pca[,-c("Aceleradorprom", "Empleado", "Tipo dia", "Fecha")]
+
+datos_pca[, ficha := substr(ficha, 2, 5)]
+datos_pca[, ficha := as.numeric(ficha)]
+
+datos_pca_agrale <- datos_pca[Chasis == "BUS AGRALE MT 17.0/LE",]
+datos_pca_agrale <- datos_pca_agrale[!is.na(cod_empleado)]
+datos_pca_agrale <- datos_pca_agrale[,-c("Chasis")]
+
+datos_pca_mb <- datos_pca[Chasis == "MB O500U 1826-59",]
+datos_pca_mb <- datos_pca_mb[!is.na(cod_empleado)]
+datos_pca_mb <- datos_pca_mb[,-c("Chasis")]
+
+pca_agrale <- FactoMineR::PCA(X = datos_pca_agrale, scale.unit = T, ncp = ncol(datos_pca_agrale), graph = F)
+
+fviz_eig(pca_agrale, addlabels = TRUE, ncp = ncol(datos_pca_agrale))
+
+eig.val <- factoextra::get_eigenvalue(pca_agrale)
+kable(eig.val)
+
+var_agrale <- get_pca_var(pca_agrale)
+
+corrplot(var_agrale$contrib, is.corr=FALSE) 
+
+contribucion_consumo_agrale <-  sort(t(var_agrale$cos2)[,"consumption.avgFuel"], decreasing = TRUE)
+contribucion_consumo_agrale <- as.data.frame(contribucion_consumo_agrale)
+dimensiones <- rownames(contribucion_consumo_agrale)
+contribucion_consumo_agrale <- data.frame(dimensiones, contribucion_consumo_agrale)
+colnames(contribucion_consumo_agrale) <- c("componente", "contribucion")
+
+ggplot(contribucion_consumo_agrale,aes(x = reorder(componente, -contribucion), y = contribucion, 
+               label = paste0(round(contribucion * 100),"%"))) +
+  geom_bar(stat = "identity", fill = "lightblue", color = "grey") +
+  geom_text(nudge_y = 0.02) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90)
+  ) +
+  labs(title = "Contribución de la variable Consumo",
+       x = "Componentes", y = "Porcentaje Contribución") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+fviz_pca_ind(pca_agrale, axes = c(3,1), label = "none",
+             habillage = "consumption.avgFuel")
