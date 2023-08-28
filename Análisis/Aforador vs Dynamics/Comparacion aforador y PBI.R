@@ -86,7 +86,7 @@ tabla_comparacion$DIA <- lubridate::wday(tabla_comparacion$FECHA, label= TRUE, a
 tabla_comparacion[is.na(tabla_comparacion)] <- 0
 tabla_comparacion <- tabla_comparacion %>%
   filter(
-    FECHA < "2023/08/16",
+    FECHA < "2023/08/28",
 #     # FECHA > "2023/05/01",
 #     #TALLER != "STE"
           )
