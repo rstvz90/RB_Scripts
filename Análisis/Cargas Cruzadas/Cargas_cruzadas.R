@@ -178,8 +178,9 @@ total_litros <- detalle[, .(Total_litros = sum(LTS_cruzados, na.rm = TRUE)),
   by = .(Almacen)
 ]
 
-total_porcentaje <- detalle[, .(Total_porcentaje = sum(Cantidad_cruzadas, na.rm = TRUE) / sum(Cantidad_cargas, na.rm = TRUE)),
-  by = .(Almacen)
+total_porcentaje <- detalle[, .(Total_porcentaje = sum(Cantidad_cruzadas, na.rm = TRUE) /
+  sum(Cantidad_cargas, na.rm = TRUE)),
+by = .(Almacen)
 ]
 
 
@@ -194,7 +195,11 @@ ggplot() +
     x = Mes, y = Almacen,
     label = paste(round(cargas_cruzadas_porcentaje * 100, 2), "%")
   ), color = "black", size = 5) +
-  geom_point(data = total_porcentaje, aes(x = "Total", y = Almacen, color = Total_porcentaje), size = 24, shape = 15) +
+  geom_point(
+    data = total_porcentaje,
+    aes(x = "Total", y = Almacen, color = Total_porcentaje),
+    size = 24, shape = 15
+  ) +
   geom_text(data = total_porcentaje, aes(
     x = "Total", y = Almacen,
     label = paste(round(Total_porcentaje * 100, 2), "%")
@@ -204,7 +209,7 @@ ggplot() +
   scale_color_gradient(low = "white", high = "red") +
   guides(
     fill = "none",
-    #fill = guide_colourbar(title = "Porcentaje"),
+    # fill = guide_colourbar(title = "Porcentaje"),
     color = "none"
   ) +
   scale_x_discrete(expand = c(0, 0.5), limits = c(as.character(unique(detalle$Mes)), "Total")) +
@@ -220,8 +225,8 @@ ggplot() +
     plot.subtitle = element_text(hjust = 0.5, size = 14, margin = margin(t = 0, r = 0, l = 0, b = 1, unit = "cm")),
     panel.grid = element_blank(),
     plot.margin = margin(t = 1, r = 1, l = 1, b = 1, unit = "cm")
-    #legend.text = element_text(size = 14),
-    #legend.title = element_text(size = 16)
+    # legend.text = element_text(size = 14),
+    # legend.title = element_text(size = 16)
   ) +
   labs(
     title = "Porcentaje de cargas cruzadas",
@@ -230,19 +235,36 @@ ggplot() +
 
 ggplot() +
   geom_tile(
-    data = detalle, aes(x = Mes, y = Almacen, fill = LTS_cruzados), color = "white",
+    data = detalle,
+    aes(x = Mes, y = Almacen, fill = LTS_cruzados),
+    color = "white",
     lwd = 1.5,
     linetype = 0.1
   ) +
-  geom_text(data = detalle, aes(x = Mes, y = Almacen, label = round(LTS_cruzados)), color = "black", size = 5) +
-  geom_point(data = total_litros, aes(x = "Total", y = Almacen, color = Total_litros), size = 24, shape = 15) +
-  geom_text(data = total_litros, aes(x = "Total", y = Almacen, label = round(Total_litros)), color = "black", size = 5) +
+  geom_text(
+    data = detalle,
+    aes(x = Mes, y = Almacen, label = round(LTS_cruzados)),
+    color = "black",
+    size = 5
+  ) +
+  geom_point(
+    data = total_litros,
+    aes(x = "Total", y = Almacen, color = Total_litros),
+    size = 24,
+    shape = 15
+  ) +
+  geom_text(
+    data = total_litros,
+    aes(x = "Total", y = Almacen, label = round(Total_litros)),
+    color = "black",
+    size = 5
+  ) +
   theme_minimal() +
   scale_fill_gradient(low = "white", high = "red") +
   scale_color_gradient(low = "white", high = "red") +
   guides(
     fill = "none",
-    #fill = guide_colourbar(title = "Litros"),
+    # fill = guide_colourbar(title = "Litros"),
     color = "none"
   ) +
   scale_x_discrete(expand = c(0, 0.5), limits = c(as.character(unique(detalle$Mes)), "Total")) +
@@ -260,7 +282,7 @@ ggplot() +
     plot.title = element_text(hjust = 0.5, size = 18, margin = margin(t = 0, r = 0, l = 0, b = 0.5, unit = "cm")),
     panel.grid = element_blank(),
     plot.margin = margin(t = 1, r = 1, l = 1, b = 1, unit = "cm")
-    #legend.text = element_text(size = 14),
-    #legend.title = element_text(size = 16)
+    # legend.text = element_text(size = 14),
+    # legend.title = element_text(size = 16)
   ) +
   labs(title = "Cantidad de litros en cargas cruzadas")
