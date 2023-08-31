@@ -7,7 +7,10 @@ listofpackages <- c(
   "tidyverse", "lubridate", "readxl",
   "rstudioapi", "data.table", "corrplot",
   "tibble", "ggplot2", "DT", "plotly", "knitr",
-  "janitor", "clipr", "skimr", "ggrepel","factoextra"
+  "janitor", "clipr", "skimr", "ggrepel","factoextra",
+  "corrplot","ade4", "cluster", "stats", 
+  "cowplot", "rpart.plot",
+  "rpart", "caret", "ROCR", "Metrics"
 )
 
 # revisar e instalar librerias que no es están instaladas
@@ -16,6 +19,57 @@ newPackages <- listofpackages[!(listofpackages %in% installed.packages()[, "Pack
 if (length(newPackages)) install.packages(newPackages)
 for (paquete in listofpackages) {
   suppressMessages(library(paquete, character.only = TRUE))
+}
+
+generar_boxplots_por_grupos <- function(df, var_interes, grupos = "cluster") {
+
+  # Convertir a cuadro de datos
+  df <- data.frame(df)
+
+  # Definir etiquetas que con la cantidad de observaciones por grupos
+  etiquetas <- paste(
+    levels(factor(df[, grupos])), "\n(N = ", table(df[, grupos]), ")", sep = ""
+  )
+
+  # Generar gráfico
+  boxplot <- ggplot(
+    df,
+    aes(x = factor(get(grupos)), y = get(var_interes),
+        fill = factor(get(grupos)))) +
+    geom_boxplot() +
+    theme(legend.position = "none") +
+    scale_x_discrete(name = paste0(grupos), labels = etiquetas) +
+    scale_y_continuous(name = paste0(var_interes)) +
+    geom_hline(yintercept = median(df[, var_interes])) +
+    theme(axis.text.x = element_text(size = rel(0.75)))
+
+  return(boxplot)
+}
+
+
+generar_boxplots_por_grupos_2 <- function(df, var_interes, grupos = "Nivel_consumo") {
+
+  # Convertir a cuadro de datos
+  df <- data.frame(df)
+
+  # Definir etiquetas que con la cantidad de observaciones por grupos
+  etiquetas <- paste(
+    levels(factor(df[, grupos])), "\n(N = ", table(df[, grupos]), ")", sep = ""
+  )
+
+  # Generar gráfico
+  boxplot <- ggplot(
+    df,
+    aes(x = factor(get(grupos)), y = get(var_interes),
+        fill = factor(get(grupos)))) +
+    geom_boxplot() +
+    theme(legend.position = "none") +
+    scale_x_discrete(name = paste0(grupos), labels = etiquetas) +
+    scale_y_continuous(name = paste0(var_interes)) +
+    geom_hline(yintercept = median(df[, var_interes])) +
+    theme(axis.text.x = element_text(size = rel(0.75)))
+
+  return(boxplot)
 }
 
 # LECTURA DE ARCHIVOS ------------------------------
@@ -443,6 +497,7 @@ cor(consumo_ff[Chasis == "MB O500U 1826-59", Consumo_DUP], consumo_ff[Chasis == 
 
 # PCA -------------------------
 
+# LECTURA DE DATOS
 datos_pca <- merge.data.table(consumo_41, acelerador_41,
   by = "cod_desig",
   all.x = TRUE
@@ -484,20 +539,111 @@ datos_pca <- merge.data.table(datos_pca, velocidad_41,
   all.x = TRUE
 )
 
+# ETL
 setnames(datos_pca, colnames(datos_pca), gsub("Suma de ", "", colnames(datos_pca)))
+setnames(datos_pca, colnames(datos_pca), gsub("profile", "", colnames(datos_pca)))
 
-datos_pca <- datos_pca[,-c("Aceleradorprom", "Empleado", "Tipo dia", "Fecha")]
+datos_pca <- datos_pca[,-c("Aceleradorprom", "Empleado", "Tipo dia", "Fecha","cod_desig", "Linea 1", "% Frenadas bruscas")]
+
+etiquetas_consumo <- c("Bajo", "Medio", "Alto")
+
+datos_pca[, Nivel_consumo := cut(consumption.avgFuel,
+  breaks = quantile(consumption.avgFuel, probs = c(0, 0.25, 0.75, 1)),
+  labels = etiquetas_consumo,
+  include.lowest = TRUE
+), by = Chasis]
 
 datos_pca[, ficha := substr(ficha, 2, 5)]
 datos_pca[, ficha := as.numeric(ficha)]
+#datos_pca[, Nivel_consumo := as.numeric(Nivel_consumo)]
+
+
 
 datos_pca_agrale <- datos_pca[Chasis == "BUS AGRALE MT 17.0/LE",]
+datos_pca_agrale <- datos_pca_agrale[Distance > 50,]
+datos_pca_agrale <- datos_pca_agrale[consumption.avgFuel > 15,]
 datos_pca_agrale <- datos_pca_agrale[!is.na(cod_empleado)]
-datos_pca_agrale <- datos_pca_agrale[,-c("Chasis")]
+Nivel_consumo_agrale <- datos_pca_agrale[,"Nivel_consumo"]
+datos_pca_agrale <- datos_pca_agrale[,-c("Chasis", "Nivel_consumo","cod_empleado")]
+var_agrale <- skim(datos_pca_agrale)[c(2,7,11)]
+setDT(var_agrale)
+var_agrale <- unlist(var_agrale[numeric.p0 == numeric.p100, "skim_variable"])
+var_agrale <- as.vector(var_agrale)
+datos_pca_agrale <- datos_pca_agrale[,-..var_agrale]
+datos_pca_agrale <- as.data.frame(scale(datos_pca_agrale))
+datos_pca_agrale$Nivel_consumo <- as.data.frame(Nivel_consumo_agrale)
+datos_pca_agrale <- as.data.table(datos_pca_agrale)
+
 
 datos_pca_mb <- datos_pca[Chasis == "MB O500U 1826-59",]
+datos_pca_mb <- datos_pca_mb[Distance > 30,]
+datos_pca_mb <- datos_pca_mb[consumption.avgFuel > 15,]
 datos_pca_mb <- datos_pca_mb[!is.na(cod_empleado)]
-datos_pca_mb <- datos_pca_mb[,-c("Chasis")]
+Nivel_consumo_mb <- datos_pca_mb[,"Nivel_consumo"]
+datos_pca_mb <- datos_pca_mb[,-c("Chasis", "Nivel_consumo","cod_empleado")]
+var_mb <- skim(datos_pca_mb)[c(2,7,11)]
+setDT(var_mb)
+var_mb <- unlist(var_mb[numeric.p0 == numeric.p100, "skim_variable"])
+var_mb <- as.vector(var_mb)
+datos_pca_mb <- datos_pca_mb[,-..var_mb]
+datos_pca_mb <- as.data.frame(scale(datos_pca_mb))
+datos_pca_mb$Nivel_consumo <- as.data.frame(Nivel_consumo_mb)
+datos_pca_mb <- as.data.table(datos_pca_mb)
+
+datos_cluster_agrale <- datos_pca_agrale[,-c("ficha", "cod_emp", "Mes")]
+
+datos_cluster_mb <- datos_pca_mb[,-c("ficha", "cod_emp", "Mes")]
+
+vars_to_cluster <- c(
+  "consumption.avgFuel",  "consumption.fuel", "accelerator.get80",
+  "Speed.speedAvg", "Torque.torqueAvg", "rpm.optimalRangePercentage",
+  "times.driving", "brakeApplication", "Distance"
+)
+
+
+dt_cluster_agrale <- scale(datos_cluster_agrale[,-c("Nivel_consumo")])
+dt_cluster_agrale <- as.data.frame(dt_cluster_agrale)
+setDT(dt_cluster_agrale)
+dt_cluster_agrale$Nivel_consumo <- datos_cluster_agrale[, c("Nivel_consumo")]
+
+#for (j in 1:9) {
+#  nombregrafico <- paste0("c", j)
+#  assign(
+#    nombregrafico,
+#    generar_boxplots_por_grupos_2(
+#      df = dt_cluster_agrale,
+#      var_interes = vars_to_cluster[j]
+#      )
+#    )
+#}
+
+#p_ag <- plot_grid(c1, c2, c3, c4, c5, c6, c7, c8, c9, ncol = 3)
+#title_ag <- ggdraw() + draw_label("BUS AGRALE MT 17.0/LE", fontface='bold')
+#plot_grid(title_ag, p_ag, ncol=1, rel_heights=c(0.1, 1)) # rel_heights values control title margins
+
+
+dt_cluster_mb <- scale(datos_cluster_mb[,-c("Nivel_consumo")])
+dt_cluster_mb <- as.data.frame(dt_cluster_mb)
+setDT(dt_cluster_mb)
+dt_cluster_mb$Nivel_consumo <- datos_cluster_mb[, c("Nivel_consumo")]
+
+#for (j in 1:9) {
+#  nombregrafico <- paste0("d", j)
+#  assign(
+#    nombregrafico,
+#    generar_boxplots_por_grupos_2(
+#      df = dt_cluster_agrale,
+#      var_interes = vars_to_cluster[j]
+#      )
+#    )
+#}
+
+#p_mb <- plot_grid(d1, d2, d3, d4, d5, d6, d7, d8, d9, ncol = 3)
+#title_mb <- ggdraw() + draw_label("MB O500U 1826-59", fontface='bold')
+#plot_grid(title_mb, p_mb, ncol=1, rel_heights=c(0.1, 1)) # rel_heights values control title margins
+
+
+# PCA
 
 pca_agrale <- FactoMineR::PCA(X = datos_pca_agrale, scale.unit = T, ncp = ncol(datos_pca_agrale), graph = F)
 
@@ -528,5 +674,148 @@ ggplot(contribucion_consumo_agrale,aes(x = reorder(componente, -contribucion), y
        x = "Componentes", y = "Porcentaje Contribución") +
   theme(plot.title = element_text(hjust = 0.5))
 
-fviz_pca_ind(pca_agrale, axes = c(3,1), label = "none",
-             habillage = "consumption.avgFuel")
+fviz_pca_ind(pca_agrale, axes = c(3,1), label = "none")
+
+fviz_pca_var(pca_agrale, col.var = "cos2", axes = c(3,1),
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             repel = TRUE
+             )
+
+mayor_cos2 <- var_agrale$cos2[,1:26]
+mayor_cos2 <-  apply(mayor_cos2, MARGIN = 1, sum)
+mayor_cos2 <- sort(mayor_cos2, decreasing = TRUE)
+variables_cos2 <- as.data.frame(c(mayor_cos2))
+colnames(variables_cos2) <- c("cos2")
+variables_cos2 <- rownames(variables_cos2)
+kable(variables_cos2)
+
+
+# CLUSTER
+
+# AGRALE
+tipos_datos <- skim(dt_cluster_agrale)[,c(2,1)]
+cant_unicos <- apply(dt_cluster_agrale, MARGIN = 2, FUN = function(x) length(unique(x)))
+cant_unicos <- as.data.frame(cant_unicos)
+cant_unicos$variables <- colnames(dt_cluster_agrale)
+tipos_datos <- left_join(tipos_datos, cant_unicos, by = c("skim_variable" = "variables" ))
+
+var_factores <- which(tipos_datos$skim_type == "factor")
+var_numeric <- which(tipos_datos$skim_type == "numeric")
+
+
+distancia <- cluster::daisy(dt_cluster_agrale, metric = "gower", stand = TRUE,
+                   type = list(factor = var_factores,
+                               numeric = var_numeric))
+
+fit <- hclust(distancia, method = "ward.D2")
+
+#plot(fit, labels = NULL)
+
+#datos_cluster <- apply(dt_cluster_agrale, MARGIN = 2, FUN = function(x) coalesce(x, 0))
+
+#fviz_nbclust(dt_cluster_agrale, FUNcluster = kmeans, method = "silhouette",
+#             k.max = 20,
+#             diss = distancia) +
+#  labs(title    = "Número óptimo de clusters a considerar",
+#       subtitle = "Indice Silhouette")
+
+#wss <- (nrow(datos_cluster) - 1) * sum(apply(datos_cluster, 2, var))
+#for (i in 2:10) {
+#  wss[i] <- sum(kmeans(datos_cluster, centers = i)$withinss)
+#}
+#plot(1:10, wss, type = "b", xlab = "Number of Clusters",
+#     ylab = "Suma de cuadrados dentro de los clusters (within)")
+
+groups <- cutree(fit, k = 4)
+
+dt_cluster_agrale$cluster <- groups
+dt_cluster_agrale$cluster <- paste0("Cluster ", dt_cluster_agrale$cluster)
+cant_obs <- dt_cluster_agrale %>% 
+  group_by(cluster) %>% 
+  summarise(cant_observaciones = n(),
+            proporción = n()/nrow(dt_cluster_agrale)*100)
+
+kable(cant_obs)
+
+for (j in 1:9) {
+  nombregrafico <- paste0("e", j)
+  assign(
+    nombregrafico,
+    generar_boxplots_por_grupos(
+      df = dt_cluster_agrale,
+      var_interes = vars_to_cluster[j]
+      )
+    )
+}
+
+p_clust_ag <- plot_grid(e1, e2, e3, e4, e5, e6, e7, e8, e9, ncol = 3)
+title_ag <- ggdraw() + draw_label("BUS AGRALE MT 17.0/LE", fontface='bold')
+plot_grid(title_ag, p_clust_ag, ncol=1, rel_heights=c(0.1, 1)) # rel_heights values control title margins
+
+
+
+# MERCEDES BENZ
+dt_cluster_mb <- dt_cluster_mb[-370,]
+tipos_datos <- skim(dt_cluster_mb)[,c(2,1)]
+cant_unicos <- apply(dt_cluster_mb, MARGIN = 2, FUN = function(x) length(unique(x)))
+cant_unicos <- as.data.frame(cant_unicos)
+cant_unicos$variables <- colnames(dt_cluster_mb)
+tipos_datos <- left_join(tipos_datos, cant_unicos, by = c("skim_variable" = "variables" ))
+
+var_factores <- which(tipos_datos$skim_type == "factor")
+var_numeric <- which(tipos_datos$skim_type == "numeric")
+
+
+distancia <- cluster::daisy(dt_cluster_mb, metric = "gower", stand = TRUE,
+                   type = list(factor = var_factores,
+                               numeric = var_numeric))
+
+fit <- hclust(distancia, method = "ward.D2")
+
+#plot(fit, labels = NULL)
+
+datos_cluster <- apply(dt_cluster_mb[,-"Nivel_consumo"], MARGIN = 2, FUN = function(x) coalesce(x, 0))
+
+fviz_nbclust(datos_cluster, FUNcluster = kmeans, method = "silhouette",
+             k.max = 20,
+             diss = distancia) +
+  labs(title    = "Número óptimo de clusters a considerar",
+       subtitle = "Indice Silhouette")
+
+wss <- (nrow(datos_cluster) - 1) * sum(apply(datos_cluster, 2, var))
+for (i in 2:10) {
+  wss[i] <- sum(kmeans(datos_cluster, centers = i)$withinss)
+}
+plot(1:10, wss, type = "b", xlab = "Number of Clusters",
+     ylab = "Suma de cuadrados dentro de los clusters (within)")
+
+groups <- cutree(fit, k = 3)
+
+dt_cluster_mb$cluster <- groups
+dt_cluster_mb$cluster <- paste0("Cluster ", dt_cluster_mb$cluster)
+cant_obs <- dt_cluster_mb %>% 
+  group_by(cluster) %>% 
+  summarise(cant_observaciones = n(),
+            proporción = n()/nrow(dt_cluster_mb)*100)
+
+kable(cant_obs)
+
+for (j in 1:9) {
+  nombregrafico <- paste0("f", j)
+  assign(
+    nombregrafico,
+    generar_boxplots_por_grupos(
+      df = dt_cluster_mb,
+      var_interes = vars_to_cluster[j]
+      )
+    )
+}
+
+p_clust_mb <- plot_grid(f1, f2, f3, f4, f5, f6, f7, f8, f9, ncol = 3)
+title_mb <- ggdraw() + draw_label("MB O500U 1826-59", fontface='bold')
+plot_grid(title_mb, p_clust_mb, ncol=1, rel_heights=c(0.1, 1)) # rel_heights values control title margins
+
+
+cor(dt_cluster_mb$consumption.avgFuel, dt_cluster_mb$accelerator.get80)
+cor(dt_cluster_mb$consumption.avgFuel, dt_cluster_mb$rpm.optimalRangePercentage)
+cor(dt_cluster_mb$accelerator.get80, dt_cluster_mb$rpm.optimalRangePercentage)
