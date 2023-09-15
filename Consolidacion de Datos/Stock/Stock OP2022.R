@@ -99,11 +99,36 @@ LTS_recibidos_2 <- rbindlist(LTS_recibidos_2)
 
 LTS_recibidos_2 <- distinct(LTS_recibidos_2)
 
-setnames(LTS_recibidos_2, c("Almacén", "Nombre del artículo"), c("Taller" , "Combustible"))
+setnames(LTS_recibidos_2, c("Almacén", "Nombre del artículo", "Motivo Recuento"), c("Taller" , "Combustible", "Motivo"))
 
 LTS_recibidos_2[Taller == "RAC", Taller := "BAI"]
 LTS_recibidos_2 <- LTS_recibidos_2[Taller != "SAA",]
 LTS_recibidos_2[Combustible == "GASOIL INFINIA DIESEL", Combustible := "INFINIA DIESEL"]
+LTS_recibidos_2[, Mes := lubridate::month(Fecha, label = TRUE, abbr = FALSE)]
+LTS_recibidos_2[, Year := lubridate::year(Fecha)]
+
+LTS_recuentos <- LTS_recibidos_2[Referencia == "Recuento",]
+#LTS_recuentos <- LTS_recuentos[Mes == "agosto" & Year == 2023,]
+LTS_recuentos <- LTS_recuentos[!grepl("Error Aleatorio", Motivo),]
+LTS_recuentos <- LTS_recuentos[!grepl("Unificaci", Motivo),]
+LTS_recuentos <- LTS_recuentos[!grepl("Falta calibra", Motivo),]
+LTS_recuentos <- LTS_recuentos[!grepl("Sin teleme", Motivo),]
+LTS_recuentos <- LTS_recuentos[!grepl("Falta requerido", Motivo),]
+LTS_recuentos <- LTS_recuentos[!grepl("Material mezclado", Motivo),]
+LTS_recuentos <- LTS_recuentos[!grepl("Falta calib surtidor", Motivo),]
+LTS_recuentos <- LTS_recuentos[!grepl("Cambio de modelo de material", Motivo),]
+LTS_recuentos <- LTS_recuentos[!grepl("Pedido especial Dirección", Motivo),]
+LTS_recuentos <- LTS_recuentos[!is.na(Motivo) & Referencia == "Recuento",]
+LTS_recuentos_2 <- LTS_recuentos[, .(LTS_recuentos = sum(Cantidad, na.rm = TRUE)), by = .(Taller, Mes, Year)]
+
+LTS_transferencia <- LTS_recibidos_2[Referencia == "Recuento" | 
+                                     Referencia == "Pedido de transferencia" |
+                                     Referencia == "Pedido de venta",]
+LTS_transferencia <- LTS_transferencia[!(Referencia == "Recuento" & Motivo != "Pedido especial Dirección"),]
+LTS_transferencia_2 <- LTS_transferencia[, .(LTS_recuentos = sum(Cantidad, na.rm = TRUE)), by = .(Taller, Mes, Year)]
+
+
+
 
 LTS_recibidos_2 <- LTS_recibidos_2[Referencia == "Pedido de compra" | 
                                      Referencia == "Pedido de transferencia" |
@@ -113,7 +138,7 @@ LTS_recibidos_2[, `:=`(Year = year(Fecha),
                        Mes = lubridate::month(Fecha, label = TRUE, abbr = FALSE))]
 
 LTS_recibidos_2 <- LTS_recibidos_2[Year == 2023 &
-                                   Mes < "agosto",]
+                                   Mes < "septiembre",]
 
 LTS_recibidos_2 <- LTS_recibidos_2[, .(LTS_recibidos_2 = sum(Cantidad, na.rm = TRUE)),
                                    by = .(Taller, Year, Mes)]
@@ -121,11 +146,12 @@ LTS_recibidos_2 <- LTS_recibidos_2[, .(LTS_recibidos_2 = sum(Cantidad, na.rm = T
 
 setDT(LTS_recibidos)
 LTS_excel <- LTS_recibidos[Year == 2023 &
-                             Mes < "agosto",]
+                             Mes < "septiembre",]
 
 LTS_excel <- LTS_excel[, .(LTS = sum(LTS_recibidos, na.rm = TRUE)),
                        by = .(Year, Mes)]
 #-----------------------------
+
 
 
 # RECUENTOS -------------------------------
@@ -187,12 +213,14 @@ Tabla_Telemedicion[is.na(Tabla_Telemedicion)] <- 0
 # 
 # Tabla_Telemedicion <- left_join(Tabla_Telemedicion, id_tanques, by = c("TALLER" = "Taller",
 #                                                                        "IDMULTITANQUE" = "IdTanque"))
-data.table::unique()
-Stock_fin_ini <- Tabla_Telemedicion %>% 
+
+Tabla_Telemedicion <- Tabla_Telemedicion %>% 
   mutate(FECHAINICIO = dmy_hms(FECHAINICIO),
          FECHACIERRE = dmy_hms(FECHACIERRE),
          Year = lubridate::year(FECHAINICIO),
-         Mes = lubridate::month(FECHAINICIO,label = TRUE, abbr = FALSE)) %>% 
+         Mes = lubridate::month(FECHAINICIO,label = TRUE, abbr = FALSE)) 
+
+Stock_fin_ini <- Tabla_Telemedicion %>% 
   # filter(Mes == Mes_filtro, Year == Year_filtro) %>% 
   arrange(TALLER, FECHAINICIO) %>% 
   group_by(TALLER, Year, Mes, IDMULTITANQUE) %>% 
@@ -207,6 +235,7 @@ Stock_fin_ini <- Tabla_Telemedicion %>%
 
 #-----------------------------
 
+sum(Tabla_Telemedicion$DIFERENCIAVOLUMEN[Tabla_Telemedicion$TALLER == "VGA" & Tabla_Telemedicion$Mes == "agosto" & Tabla_Telemedicion$Year == 2023])
 
 # LITROS DESPACHADOS ------------------------
 
@@ -520,12 +549,16 @@ vector_colores <- c("-1" = "red", "1" = "green")
 
 # plot_bar
 
-carpeta <- "C:/Users/REstevez/Documents/Análisis/Resultados/Gráficos Stock/202307/"
+carpeta <- "C:/Users/REstevez/Documents/Análisis/Resultados/Gráficos Stock/202308/"
+if (!file.exists(carpeta)){
+        dir.create(file.path(carpeta))
+}
+
 
 for (taller in lista_talleres) {
   
   TOTAL_plot <- TOTAL %>% 
-    filter(Year == 2023, Taller == taller, Mes < "agosto") #%>% 
+    filter(Year == 2023, Taller == taller, Mes < "septiembre") #%>% 
   #mutate(Combustible = as.factor(Combustible))
   
   Diferencia_total = round(sum(TOTAL_plot$Diferencia, na.rm = TRUE))
