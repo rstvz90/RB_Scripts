@@ -17,10 +17,14 @@ for (paquete in listofpackages) {
 }  
 
 
+fecha_inicio <- "2022/08/01"
+fecha_fin <- "2023/08/31"
 
+#Mes_filtro_fin <-  "septiembre"
+#Year_filtro_fin <- 2023
 
-# Mes_filtro <-  "abril"
-# Year_filtro <- 2023
+#Mes_filtro_ini <-  "julio"
+#Year_filtro_ini <- 2022
 
 #-----------------------------
 path <- "C:/Users/REstevez/Documents/HISTORICOS"
@@ -42,7 +46,9 @@ Tabla_LTS <- Tabla_LTS %>%
     Year = lubridate::year(Fecha),
     Mes = lubridate::month(Fecha, label = TRUE, abbr = FALSE)
   ) %>% 
-  filter(`Lts Recibidos` != 0)
+  filter(`Lts Recibidos` != 0,
+         Fecha >= fecha_inicio,
+         Fecha <= fecha_fin)
 
 Tabla_LTS$Combustible[Tabla_LTS$Combustible == "D500"] <- "GASOIL D500"
 Tabla_LTS$Combustible[Tabla_LTS$Combustible == "EURO"] <- "INFINIA DIESEL"
@@ -53,6 +59,13 @@ LTS_recibidos <- Tabla_LTS %>%
   summarise(LTS_recibidos = sum(`Lts Recibidos`, na.rm = TRUE)) %>%
   filter(!is.na(Taller))
 
+#Recuento no registrado de 2000 litros en VGA
+
+LTS_recibidos$LTS_recibidos[LTS_recibidos$Taller == "BAI" &
+                              LTS_recibidos$Mes == "agosto" &
+                              LTS_recibidos$Year == 2023] <- LTS_recibidos$LTS_recibidos[LTS_recibidos$Taller == "BAI" &
+                                                                                           LTS_recibidos$Mes == "agosto" &
+                                                                                           LTS_recibidos$ Year == 2023] - 2000
 # motivos <- c(#"Error de recepcion OT"
 #              #,"Error de tipeo"
 #              "Material mezclado"
@@ -90,8 +103,8 @@ LTS_recibidos <- Tabla_LTS %>%
 files_mov_stock <- files[grepl("mov_stock", files)]
 
 LTS_recibidos_2 <- lapply(files_mov_stock, 
-read_xlsx, 
-col_types = c("date", "text", "text", "numeric", "text", "text"))
+                          read_xlsx, 
+                          col_types = c("date", "text", "text", "numeric", "text", "text"))
 
 LTS_recibidos_2 <- lapply(LTS_recibidos_2, setDT)
 
@@ -122,8 +135,8 @@ LTS_recuentos <- LTS_recuentos[!is.na(Motivo) & Referencia == "Recuento",]
 LTS_recuentos_2 <- LTS_recuentos[, .(LTS_recuentos = sum(Cantidad, na.rm = TRUE)), by = .(Taller, Mes, Year)]
 
 LTS_transferencia <- LTS_recibidos_2[Referencia == "Recuento" | 
-                                     Referencia == "Pedido de transferencia" |
-                                     Referencia == "Pedido de venta",]
+                                       Referencia == "Pedido de transferencia" |
+                                       Referencia == "Pedido de venta",]
 LTS_transferencia <- LTS_transferencia[!(Referencia == "Recuento" & Motivo != "Pedido especial Dirección"),]
 LTS_transferencia_2 <- LTS_transferencia[, .(LTS_recuentos = sum(Cantidad, na.rm = TRUE)), by = .(Taller, Mes, Year)]
 
@@ -138,7 +151,7 @@ LTS_recibidos_2[, `:=`(Year = year(Fecha),
                        Mes = lubridate::month(Fecha, label = TRUE, abbr = FALSE))]
 
 LTS_recibidos_2 <- LTS_recibidos_2[Year == 2023 &
-                                   Mes < "septiembre",]
+                                     Mes < "septiembre",]
 
 LTS_recibidos_2 <- LTS_recibidos_2[, .(LTS_recibidos_2 = sum(Cantidad, na.rm = TRUE)),
                                    by = .(Taller, Year, Mes)]
@@ -202,9 +215,9 @@ Tabla_Telemedicion <- rbindlist(Tabla_Telemedicion)
 
 Tabla_Telemedicion <- distinct(Tabla_Telemedicion)
 
-id_tanques <- read_xlsx("ID TANQUES.xlsx", sheet = "ID")
+#id_tanques <- read_xlsx("ID TANQUES.xlsx", sheet = "ID")
 
-id_tanques$IdTanque <- as.character(id_tanques$IdTanque)
+#id_tanques$IdTanque <- as.character(id_tanques$IdTanque)
 
 Tabla_Telemedicion$TALLER[Tabla_Telemedicion$TALLER == "BERU"] <- "BER"
 Tabla_Telemedicion$TALLER[Tabla_Telemedicion$TALLER == "MUN"] <- "CAR"
@@ -217,12 +230,16 @@ Tabla_Telemedicion[is.na(Tabla_Telemedicion)] <- 0
 Tabla_Telemedicion <- Tabla_Telemedicion %>% 
   mutate(FECHAINICIO = dmy_hms(FECHAINICIO),
          FECHACIERRE = dmy_hms(FECHACIERRE),
+         FECHA = as.Date(FECHAINICIO),
          Year = lubridate::year(FECHAINICIO),
-         Mes = lubridate::month(FECHAINICIO,label = TRUE, abbr = FALSE)) 
+         Mes = lubridate::month(FECHAINICIO,label = TRUE, abbr = FALSE)) %>% 
+  filter(
+    FECHA >= fecha_inicio,
+    FECHA <= fecha_fin)
 
 Stock_fin_ini <- Tabla_Telemedicion %>% 
   # filter(Mes == Mes_filtro, Year == Year_filtro) %>% 
-  arrange(TALLER, FECHAINICIO) %>% 
+  arrange(TALLER, FECHA) %>% 
   group_by(TALLER, Year, Mes, IDMULTITANQUE) %>% 
   summarise(Stock_inicial = first(VOLUMENINI),
             Stock_final = last(VOLUMENFIN),
@@ -257,6 +274,7 @@ setDT(LTS_df)
 
 LTS_df <- LTS_df[Cod_articulo == 101293 | Cod_articulo == 101294,]
 
+
 LTS_df <- LTS_df %>% 
   filter(Resultado == "Successful",
          startsWith(Ficha, "F"),
@@ -277,7 +295,10 @@ LTS_df <- LTS_df %>%
   ) %>% 
   arrange(Ficha, Fecha_Hora) %>% 
   select(Ficha, CodAlmacen, ProductName, 
-         Texto, Fecha_Hora, ConsumoTotal, FechaCorregida, Hora, Mes, Year)
+         Texto, Fecha_Hora, ConsumoTotal, FechaCorregida, Hora, Mes, Year) %>% 
+  filter(
+    FechaCorregida >= fecha_inicio,
+    FechaCorregida <= fecha_fin)
 
 LTS_df$CodAlmacen[LTS_df$CodAlmacen == "RAC"] <- "BAI"
 LTS_df$ProductName [LTS_df$ProductName == "GASOIL INFINIA DIESEL"] <-  "INFINIA DIESEL"
@@ -462,7 +483,7 @@ TOTAL_dif <- TOTAL %>%
     LTS_recibidos = sum(LTS_recibidos, na.rm = TRUE),
     # LTS_recibidos_2 = sum(LTS_recibidos_2, na.rm = TRUE),
     LTS_surtidor = sum(LTS_surtidor, na.rm = TRUE),
-    #LTS_recuentos = sum(LTS_recuentos, na.rm = TRUE),
+    # LTS_recuentos = sum(LTS_recuentos, na.rm = TRUE),
     Stock_inicial = first(Stock_inicial),
     Stock_final = last(Stock_final),
     Dif_Stock = Stock_final - Stock_inicial
@@ -551,7 +572,7 @@ vector_colores <- c("-1" = "red", "1" = "green")
 
 carpeta <- "C:/Users/REstevez/Documents/Análisis/Resultados/Gráficos Stock/202308/"
 if (!file.exists(carpeta)){
-        dir.create(file.path(carpeta))
+  dir.create(file.path(carpeta))
 }
 
 
@@ -681,3 +702,37 @@ for (taller in lista_talleres) {
 # 
 # plot_porcentaje 
 
+# GRAFICO EVOLUCION DIFERENCIAS
+
+setDT(TOTAL)
+
+TOTAL_agrupado <- TOTAL[Stock_inicial > 0, .(Diferencia = sum(Diferencia, na.rm = TRUE),
+                                             LTS_comprados = sum(LTS_recibidos, na.rm = TRUE),
+                                             LTS_consumidos = sum(LTS_surtidor, na.rm = TRUE)), by = .(Year, Mes)]
+
+
+TOTAL_agrupado[, Porcentaje := Diferencia / LTS_comprados * 100]
+TOTAL_agrupado[, Comienzo_Mes := as.Date(paste0(Year,"/",as.numeric(Mes),"/1"))]
+TOTAL_agrupado[, Mes_Year := paste0(Year,"-",Mes)]
+
+setorder(TOTAL_agrupado, Comienzo_Mes)
+
+
+
+ggplot(TOTAL_agrupado) +
+  aes(x = reorder(Mes_Year, Comienzo_Mes), y = abs(Porcentaje), group = 1, label = paste(round(abs(Porcentaje),2),"%")) +
+  geom_line(color = "gold3", alpha = 1, size = 1.5) +
+  #geom_line(aes(x = seq(1, length(TOTAL_agrupado$Mes_Year)), y = rep(0, length(TOTAL_agrupado$Mes_Year))), 
+  #          color = "black", size = 1.5, linetype = 2) +
+  geom_point(color = "gold3", alpha = 1, size = 4) +
+  ggrepel::geom_text_repel(direction = c("y"), nudge_y = 0.1000, size = 5) +
+  theme_minimal() +
+  labs(title = "Diferencias de Combustible Mensuales (Valores absolutos)",
+       y = "Pordentaje de Diferencias de Combustible",
+       x = "") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 20),
+    axis.text.x = element_text(size = 12, angle = 20),
+    axis.text.y = element_text(size = 12),
+    axis.title.y = element_text(size = 16)
+  )
